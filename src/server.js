@@ -16,7 +16,14 @@ const app = express();
 /* -------------------------
    Middlewares
 -------------------------- */
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://resume-analyzer-frontend-eight-nu.vercel.app",
+    /\.vercel\.app$/
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 /* -------------------------
