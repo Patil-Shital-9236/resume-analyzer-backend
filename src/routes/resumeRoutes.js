@@ -1,0 +1,304 @@
+const express = require("express");
+const multer = require("multer");
+const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
+
+const pool = require("../config/db");
+
+const extractSkills = require("../services/skillExtractor");
+const extractEducation = require("../services/educationExtractor");
+const extractExperience = require("../services/experienceExtractor");
+const { generateEmbedding } = require("../services/embedding");  // ✅ Import embedding
+
+const router = express.Router();
+
+/* -------------------------
+   Multer Setup
+-------------------------- */
+
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+/* -------------------------
+   POST /api/resume/upload
+-------------------------- */
+
+router.post("/upload", upload.single("resume"), async (req, res) => {
+
+  try {
+
+    const { userId } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: "Resume file required"
+      });
+    }
+
+    let parsedText = "";
+    let fileType = "";
+
+    /* -------------------------
+       Detect File Type
+    -------------------------- */
+
+    if (req.file.originalname.toLowerCase().endsWith(".pdf")) {
+      fileType = "pdf";
+
+      const data = await pdfParse(req.file.buffer);
+      parsedText = data.text;
+
+    }
+    else if (req.file.originalname.toLowerCase().endsWith(".docx")) {
+
+      fileType = "docx";
+
+      const result = await mammoth.extractRawText({
+        buffer: req.file.buffer
+      });
+
+      parsedText = result.value;
+
+    }
+    else {
+
+      return res.status(400).json({
+        error: "Only PDF and DOCX files allowed"
+      });
+
+    }
+
+    parsedText = parsedText.toLowerCase();
+
+    /* -------------------------
+       Extract Structured Data
+    -------------------------- */
+
+    const skills = await extractSkills(parsedText);
+    const education = extractEducation(parsedText);
+    const experience = extractExperience(parsedText);
+
+    const structuredData = {
+      skills,
+      education,
+      experience
+    };
+
+    /* -------------------------
+       Generate Embedding
+    -------------------------- */
+
+    const MAX_LENGTH = 8000;
+    const embedding = await generateEmbedding(parsedText.slice(0, MAX_LENGTH));
+
+    if (!embedding) {
+      console.warn("⚠️ Embedding generation failed, storing NULL");
+    } else {
+      console.log("✅ Resume embedding generated, length:", embedding.length);
+    }
+
+    /* -------------------------
+       Save Resume
+    -------------------------- */
+
+    const query = `
+      INSERT INTO resumes
+      (
+        user_id,
+        file_name,
+        s3_key,
+        file_type,
+        parsed_content,
+        structured_data,
+        embedding
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING *;
+    `;
+
+    const values = [
+      userId,
+      req.file.originalname,
+      "local_upload",
+      fileType,
+      parsedText,
+      JSON.stringify(structuredData),
+      embedding          // ✅ Store embedding (null if generation failed)
+    ];
+
+    const result = await pool.query(query, values);
+
+    /* -------------------------
+       Response
+    -------------------------- */
+
+    res.json({
+      success: true,
+      message: "Resume uploaded and analyzed",
+      resumeId: result.rows[0].id,
+      embeddingStored: !!embedding,   // ✅ Let client know if embedding was saved
+      analysis: structuredData
+    });
+
+  }
+  catch (error) {
+
+    console.error("Resume upload failed:", error);
+
+    res.status(500).json({
+      error: "Resume processing failed"
+    });
+
+  }
+
+});
+
+module.exports = router;
+// const express = require("express");
+// const multer = require("multer");
+// const pdfParse = require("pdf-parse");
+// const mammoth = require("mammoth");
+
+// const pool = require("../config/db");
+
+// const extractSkills = require("../services/skillExtractor");
+// const extractEducation = require("../services/educationExtractor");
+// const extractExperience = require("../services/experienceExtractor");
+
+// const router = express.Router();
+
+// /* -------------------------
+//    Multer Setup
+// -------------------------- */
+
+// const storage = multer.memoryStorage();
+
+// const upload = multer({
+//   storage: storage,
+//   limits: { fileSize: 5 * 1024 * 1024 }
+// });
+
+// /* -------------------------
+//    POST /api/resume/upload
+// -------------------------- */
+
+// router.post("/upload", upload.single("resume"), async (req, res) => {
+
+//   try {
+
+//     const { userId } = req.body;
+
+//     if (!req.file) {
+//       return res.status(400).json({
+//         error: "Resume file required"
+//       });
+//     }
+
+//     let parsedText = "";
+//     let fileType = "";
+
+//     /* -------------------------
+//        Detect File Type
+//     -------------------------- */
+
+//     if (req.file.originalname.toLowerCase().endsWith(".pdf")) {
+//       fileType = "pdf";
+
+//       const data = await pdfParse(req.file.buffer);
+//       parsedText = data.text;
+
+//     } 
+//     else if (req.file.originalname.toLowerCase().endsWith(".docx")) {
+
+//       fileType = "docx";
+
+//       const result = await mammoth.extractRawText({
+//         buffer: req.file.buffer
+//       });
+
+//       parsedText = result.value;
+
+//     } 
+//     else {
+
+//       return res.status(400).json({
+//         error: "Only PDF and DOCX files allowed"
+//       });
+
+//     }
+
+//     parsedText = parsedText.toLowerCase();
+
+//     /* -------------------------
+//        Extract Structured Data
+//     -------------------------- */
+
+//     const skills = await extractSkills(parsedText);
+//     const education = extractEducation(parsedText);
+//     const experience = extractExperience(parsedText);
+
+//     const structuredData = {
+//       skills,
+//       education,
+//       experience
+//     };
+
+//     /* -------------------------
+//        Save Resume
+//     -------------------------- */
+
+//     const query = `
+//       INSERT INTO resumes
+//       (
+//         user_id,
+//         file_name,
+//         s3_key,
+//         file_type,
+//         parsed_content,
+//         structured_data
+//       )
+//       VALUES ($1,$2,$3,$4,$5,$6)
+//       RETURNING *;
+//     `;
+
+//     const values = [
+//       userId,
+//       req.file.originalname,
+//       "local_upload", // since not using S3
+//       fileType,
+//       parsedText,
+//       JSON.stringify(structuredData)
+//     ];
+
+//     const result = await pool.query(query, values);
+
+//     /* -------------------------
+//        Response
+//     -------------------------- */
+
+//     res.json({
+//       success: true,
+//       message: "Resume uploaded and analyzed",
+//       resumeId: result.rows[0].id,
+
+//       analysis: structuredData
+//     });
+
+//   } 
+//   catch (error) {
+
+//     console.error("Resume upload failed:", error);
+
+//     res.status(500).json({
+//       error: "Resume processing failed"
+//     });
+
+//   }
+
+// });
+
+// module.exports = router;
