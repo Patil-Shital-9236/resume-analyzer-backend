@@ -2,10 +2,18 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 const pool = require("../config/db");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_SMTP_USER,
+    pass: process.env.BREVO_SMTP_PASS,
+  },
+});
 
 // ── POST /api/auth/forgot-password ──
 router.post("/forgot-password", async (req, res) => {
@@ -41,8 +49,8 @@ router.post("/forgot-password", async (req, res) => {
 
     const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
-    await resend.emails.send({
-      from: "AI Resume Analyzer <onboarding@resend.dev>",
+    await transporter.sendMail({
+      from: `"AI Resume Analyzer" <${process.env.BREVO_SMTP_USER}>`,
       to: email,
       subject: "Reset Your Password — AI Resume Analyzer",
       html: `
