@@ -4,7 +4,6 @@ const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
-const fetch = require("node-fetch");
 
 const pool = require("../config/db");
 const extractSkills = require("../services/skillExtractor");
@@ -14,31 +13,18 @@ const { generateEmbedding } = require("../services/embedding");
 
 const router = express.Router();
 
-/* -------------------------
-   Cloudinary Config
--------------------------- */
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-/* -------------------------
-   Multer Setup
--------------------------- */
 const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
-/* -------------------------
-   Upload to Cloudinary
--------------------------- */
 const uploadToCloudinary = (buffer, originalname, fileType) => {
   return new Promise((resolve, reject) => {
     const nameWithoutExt = originalname.replace(/\.[^/.]+$/, "");
-    // ✅ Remove all special characters that Cloudinary doesn't allow
     const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9_-]/g, "_");
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -55,100 +41,48 @@ const uploadToCloudinary = (buffer, originalname, fileType) => {
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
-/* -------------------------
-   GET /api/resume/view (PDF Proxy)
--------------------------- */
-/* -------------------------
-   GET /api/resume/view (PDF Proxy)
--------------------------- */
-router.get("/view", async (req, res) => {
-  try {
-    const { url } = req.query;
-    if (!url) return res.status(400).json({ error: "URL required" });
 
-    const https = require("https");
-    const http = require("http");
-
-    const options = new URL(url);
-    const client = options.protocol === "https:" ? https : http;
-
-    const request = client.get(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      }
-    }, (response) => {
-      if (response.statusCode === 301 || response.statusCode === 302) {
-        const redirectUrl = response.headers.location;
-        res.redirect(`/api/resume/view?url=${encodeURIComponent(redirectUrl)}`);
-        return;
-      }
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", "inline; filename=resume.pdf");
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("X-Frame-Options", "ALLOWALL");
-      response.pipe(res);
-    });
-
-    request.on("error", (err) => {
-      console.error("PDF proxy error:", err);
-      res.status(500).json({ error: "Failed to load PDF" });
-    });
-
-  } catch (error) {
-    console.error("PDF proxy error:", error);
-    res.status(500).json({ error: "Failed to load PDF" });
-  }
-});
-
-/* -------------------------
-   POST /api/resume/upload
--------------------------- */
 router.post("/upload", upload.single("resume"), async (req, res) => {
   try {
     const { userId } = req.body;
-
-    if (!req.file) {
-      return res.status(400).json({ error: "Resume file required" });
-    }
+    if (!req.file) return res.status(400).json({ error: "Resume file required" });
 
     let parsedText = "";
     let fileType = "";
+    let fileUrl = "";
+    let s3Key = "";
 
     if (req.file.originalname.toLowerCase().endsWith(".pdf")) {
       fileType = "pdf";
       const data = await pdfParse(req.file.buffer);
       parsedText = data.text;
+      // Store PDF as base64 directly — no Cloudinary needed
+      const base64 = req.file.buffer.toString("base64");
+      fileUrl = `data:application/pdf;base64,${base64}`;
+      s3Key = "base64_pdf";
     } else if (req.file.originalname.toLowerCase().endsWith(".docx")) {
       fileType = "docx";
       const result = await mammoth.extractRawText({ buffer: req.file.buffer });
       parsedText = result.value;
+      // Upload DOCX to Cloudinary
+      const cloudinaryResult = await uploadToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+        fileType
+      );
+      fileUrl = cloudinaryResult.secure_url;
+      s3Key = cloudinaryResult.public_id;
     } else {
       return res.status(400).json({ error: "Only PDF and DOCX files allowed" });
     }
 
     parsedText = parsedText.toLowerCase();
 
-    /* -------------------------
-       Extract Structured Data
-    -------------------------- */
     const skills = await extractSkills(parsedText);
     const education = extractEducation(parsedText);
     const experience = extractExperience(parsedText);
     const structuredData = { skills, education, experience };
 
-    /* -------------------------
-       Upload to Cloudinary
-    -------------------------- */
-    const cloudinaryResult = await uploadToCloudinary(
-      req.file.buffer,
-      req.file.originalname,
-      fileType
-    );
-    const fileUrl = cloudinaryResult.secure_url;
-
-    /* -------------------------
-       Generate Embedding
-    -------------------------- */
     const MAX_LENGTH = 8000;
     const embedding = await generateEmbedding(parsedText.slice(0, MAX_LENGTH));
 
@@ -158,9 +92,6 @@ router.post("/upload", upload.single("resume"), async (req, res) => {
       console.log("✅ Resume embedding generated, length:", embedding.length);
     }
 
-    /* -------------------------
-       Save Resume to DB
-    -------------------------- */
     const query = `
       INSERT INTO resumes
       (user_id, file_name, s3_key, file_url, file_type, parsed_content, structured_data, embedding)
@@ -171,7 +102,7 @@ router.post("/upload", upload.single("resume"), async (req, res) => {
     const values = [
       userId,
       req.file.originalname,
-      cloudinaryResult.public_id,
+      s3Key,
       fileUrl,
       fileType,
       parsedText,
@@ -196,9 +127,6 @@ router.post("/upload", upload.single("resume"), async (req, res) => {
   }
 });
 
-/* -------------------------
-   GET /api/resume/list/:userId
--------------------------- */
 router.get("/list/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
