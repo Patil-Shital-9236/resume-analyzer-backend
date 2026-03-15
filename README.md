@@ -576,11 +576,3 @@ GitHub
 [https://github.com/Patil-Shital-9236](https://github.com/Patil-Shital-9236)
 
 ---
-
- Now this README:
-
-* matches your **actual backend routes**
-* matches your **Render deployment**
-* works with your **Vercel frontend**
-* follows **industry API documentation format**
-
