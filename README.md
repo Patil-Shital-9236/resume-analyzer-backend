@@ -36,6 +36,41 @@ Built using **Node.js and Express**, this service accepts resumes, processes the
 
 ---
 
+---
+
+# Assumptions Made
+
+During the development of this project, the following assumptions were made:
+
+1. **Resume Formats**
+   - Users upload resumes primarily in **PDF format**. Other formats may require additional parsing support.
+
+2. **Resume Text Extraction**
+   - The system assumes that uploaded resumes can be successfully converted into readable text before AI analysis.
+
+3. **AI Model Behavior**
+   - Resume scoring and suggestions are generated using **Google Gemini AI**, and results may vary depending on input quality.
+
+4. **Authentication**
+   - Users must register and login before accessing protected endpoints such as profile retrieval.
+
+5. **File Size Limit**
+   - Uploaded resume files are assumed to be **under typical upload limits (~5–10MB)** to avoid processing delays.
+
+6. **Job Description Input**
+   - Job descriptions provided by users are assumed to be meaningful and detailed enough for accurate keyword and skills analysis.
+
+7. **Single Resume Analysis**
+   - The system processes **one resume at a time per request** rather than batch processing.
+
+8. **Deployment Environment**
+   - The backend is deployed on **Render**, and the frontend is deployed on **Vercel**, with CORS configured accordingly.
+
+9. **Security**
+   - Sensitive credentials such as **Gemini API keys and JWT secrets** are stored using environment variables and are not exposed in the source code.
+
+---
+
 # Project Structure
 
 ```
