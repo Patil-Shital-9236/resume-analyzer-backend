@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-const { Pool } = require("pg");
+const pool = require("../config/db");
 
 const pool = new Pool({
   host: process.env.DB_HOST || "localhost",
