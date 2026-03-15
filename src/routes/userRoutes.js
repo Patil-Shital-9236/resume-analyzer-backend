@@ -37,7 +37,7 @@ router.get("/resumes/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const result = await pool.query(
-      `SELECT id, file_name, file_type, is_latest, created_at FROM resumes WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT id, file_name, file_type, file_url, is_latest, created_at FROM resumes WHERE user_id = $1 ORDER BY created_at DESC`,
       [userId]
     );
     res.json({ resumes: result.rows });
