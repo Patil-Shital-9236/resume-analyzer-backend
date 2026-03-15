@@ -5,14 +5,6 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const pool = require("../config/db");
 
-const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || "resume_analyzer",
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "postgres123",
-});
-
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -28,20 +20,15 @@ router.post("/forgot-password", async (req, res) => {
   if (!email) return res.status(400).json({ error: "Email is required" });
 
   try {
-    // Check if user exists
     const userResult = await pool.query("SELECT id, full_name FROM users WHERE email = $1", [email]);
     if (userResult.rows.length === 0) {
-      // Don't reveal if email exists or not (security)
       return res.json({ message: "If this email exists, a reset link has been sent." });
     }
 
     const user = userResult.rows[0];
-
-    // Generate secure token
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-    // Save token to DB (create table if not exists)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -53,16 +40,12 @@ router.post("/forgot-password", async (req, res) => {
       )
     `);
 
-    // Delete old tokens for this user
     await pool.query("DELETE FROM password_reset_tokens WHERE user_id = $1", [user.id]);
-
-    // Insert new token
     await pool.query(
       "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)",
       [user.id, token, expiresAt]
     );
 
-    // Send email
     const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
     await transporter.sendMail({
@@ -110,7 +93,6 @@ router.post("/reset-password", async (req, res) => {
   if (newPassword.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters" });
 
   try {
-    // Find valid token
     const tokenResult = await pool.query(
       "SELECT * FROM password_reset_tokens WHERE token = $1 AND used = FALSE AND expires_at > NOW()",
       [token]
@@ -121,14 +103,9 @@ router.post("/reset-password", async (req, res) => {
     }
 
     const resetToken = tokenResult.rows[0];
-
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update user password
     await pool.query("UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2", [hashedPassword, resetToken.user_id]);
-
-    // Mark token as used
     await pool.query("UPDATE password_reset_tokens SET used = TRUE WHERE id = $1", [resetToken.id]);
 
     res.json({ message: "Password reset successfully. You can now log in." });
