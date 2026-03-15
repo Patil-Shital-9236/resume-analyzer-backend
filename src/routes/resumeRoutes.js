@@ -43,7 +43,7 @@ const uploadToCloudinary = (buffer, originalname, fileType) => {
         resource_type: "raw",
         folder: "resumes",
         public_id: `${Date.now()}_${nameWithoutExt}.${fileType}`,
-        access_mode: "public",
+        type: "upload",
       },
       (error, result) => {
         if (error) reject(error);
@@ -53,7 +53,6 @@ const uploadToCloudinary = (buffer, originalname, fileType) => {
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
-
 /* -------------------------
    GET /api/resume/view (PDF Proxy)
 -------------------------- */
@@ -66,17 +65,24 @@ router.get("/view", async (req, res) => {
     if (!url) return res.status(400).json({ error: "URL required" });
 
     const https = require("https");
-    const http = require("http");
-    const client = url.startsWith("https") ? https : http;
 
-    client.get(url, (response) => {
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", "inline");
-      response.pipe(res);
-    }).on("error", (err) => {
-      console.error("PDF proxy error:", err);
-      res.status(500).json({ error: "Failed to load PDF" });
-    });
+    const fetchWithRedirect = (targetUrl) => {
+      https.get(targetUrl, (response) => {
+        if (response.statusCode === 301 || response.statusCode === 302) {
+          fetchWithRedirect(response.headers.location);
+          return;
+        }
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", "inline");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        response.pipe(res);
+      }).on("error", (err) => {
+        console.error("PDF proxy error:", err);
+        res.status(500).json({ error: "Failed to load PDF" });
+      });
+    };
+
+    fetchWithRedirect(url);
 
   } catch (error) {
     console.error("PDF proxy error:", error);
