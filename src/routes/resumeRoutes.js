@@ -36,12 +36,14 @@ const upload = multer({
 -------------------------- */
 const uploadToCloudinary = (buffer, originalname) => {
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        resource_type: "raw",
-        folder: "resumes",
-        public_id: `${Date.now()}_${originalname}`,
-      },
+    // ✅ Replace with
+const uploadStream = cloudinary.uploader.upload_stream(
+  {
+    resource_type: "auto",
+    folder: "resumes",
+    public_id: `${Date.now()}_${originalname}`,
+    flags: "attachment:false",
+  },
       (error, result) => {
         if (error) reject(error);
         else resolve(result);
