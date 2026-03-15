@@ -38,11 +38,13 @@ const upload = multer({
 const uploadToCloudinary = (buffer, originalname, fileType) => {
   return new Promise((resolve, reject) => {
     const nameWithoutExt = originalname.replace(/\.[^/.]+$/, "");
+    // ✅ Remove all special characters that Cloudinary doesn't allow
+    const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9_-]/g, "_");
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         resource_type: "raw",
         folder: "resumes",
-        public_id: `${Date.now()}_${nameWithoutExt}.${fileType}`,
+        public_id: `${Date.now()}_${safeName}.${fileType}`,
         type: "upload",
       },
       (error, result) => {
