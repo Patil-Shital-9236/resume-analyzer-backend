@@ -493,14 +493,10 @@ GitHub
 
 ---
 
-✅ Now this README:
+ Now this README:
 
 * matches your **actual backend routes**
 * matches your **Render deployment**
 * works with your **Vercel frontend**
 * follows **industry API documentation format**
 
----
-
-If you want, I can also show you **one thing that will make this repo look 10× more professional to recruiters**:
-how to add **interactive API docs (Swagger UI)** so people can test your API directly in the browser.
