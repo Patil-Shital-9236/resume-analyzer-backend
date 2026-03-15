@@ -2,18 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
 const pool = require("../config/db");
-
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_SMTP_USER,
-    pass: process.env.BREVO_SMTP_PASS,
-  },
-});
 
 // ── POST /api/auth/forgot-password ──
 router.post("/forgot-password", async (req, res) => {
@@ -49,35 +38,46 @@ router.post("/forgot-password", async (req, res) => {
 
     const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
-    await transporter.sendMail({
-      from: `"AI Resume Analyzer" <${process.env.BREVO_SMTP_USER}>`,
-      to: email,
-      subject: "Reset Your Password — AI Resume Analyzer",
-      html: `
-        <div style="font-family:'Segoe UI',sans-serif;max-width:480px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-          <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:28px 32px;">
-            <h1 style="color:white;margin:0;font-size:20px;font-weight:700;">AI Resume Analyzer</h1>
-            <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;">Smart Career Insights</p>
-          </div>
-          <div style="padding:32px;">
-            <h2 style="color:#111827;font-size:18px;margin:0 0 10px;">Reset Your Password</h2>
-            <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 24px;">
-              Hi <strong>${user.full_name}</strong>, we received a request to reset your password.
-              Click the button below to create a new password.
-            </p>
-            <a href="${resetUrl}" style="display:inline-block;background:#1d4ed8;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
-              Reset Password
-            </a>
-            <p style="color:#9ca3af;font-size:12px;margin:24px 0 0;line-height:1.6;">
-              This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.
-            </p>
-            <div style="margin-top:24px;padding-top:20px;border-top:1px solid #f3f4f6;">
-              <p style="color:#d1d5db;font-size:11px;margin:0;">© 2025 AI Resume Analyzer. All rights reserved.</p>
+    // Use Brevo HTTP API instead of SMTP
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+      },
+      body: JSON.stringify({
+        sender: { name: "AI Resume Analyzer", email: process.env.BREVO_SMTP_USER },
+        to: [{ email: email }],
+        subject: "Reset Your Password — AI Resume Analyzer",
+        htmlContent: `
+          <div style="font-family:'Segoe UI',sans-serif;max-width:480px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:28px 32px;">
+              <h1 style="color:white;margin:0;font-size:20px;font-weight:700;">AI Resume Analyzer</h1>
+              <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;">Smart Career Insights</p>
+            </div>
+            <div style="padding:32px;">
+              <h2 style="color:#111827;font-size:18px;margin:0 0 10px;">Reset Your Password</h2>
+              <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 24px;">
+                Hi <strong>${user.full_name}</strong>, we received a request to reset your password.
+                Click the button below to create a new password.
+              </p>
+              <a href="${resetUrl}" style="display:inline-block;background:#1d4ed8;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
+                Reset Password
+              </a>
+              <p style="color:#9ca3af;font-size:12px;margin:24px 0 0;line-height:1.6;">
+                This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.
+              </p>
             </div>
           </div>
-        </div>
-      `,
+        `,
+      }),
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("Brevo API error:", error);
+      throw new Error("Email sending failed");
+    }
 
     res.json({ message: "If this email exists, a reset link has been sent." });
 
