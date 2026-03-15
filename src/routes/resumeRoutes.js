@@ -65,24 +65,32 @@ router.get("/view", async (req, res) => {
     if (!url) return res.status(400).json({ error: "URL required" });
 
     const https = require("https");
+    const http = require("http");
 
-    const fetchWithRedirect = (targetUrl) => {
-      https.get(targetUrl, (response) => {
-        if (response.statusCode === 301 || response.statusCode === 302) {
-          fetchWithRedirect(response.headers.location);
-          return;
-        }
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", "inline");
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        response.pipe(res);
-      }).on("error", (err) => {
-        console.error("PDF proxy error:", err);
-        res.status(500).json({ error: "Failed to load PDF" });
-      });
-    };
+    const options = new URL(url);
+    const client = options.protocol === "https:" ? https : http;
 
-    fetchWithRedirect(url);
+    const request = client.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      }
+    }, (response) => {
+      if (response.statusCode === 301 || response.statusCode === 302) {
+        const redirectUrl = response.headers.location;
+        res.redirect(`/api/resume/view?url=${encodeURIComponent(redirectUrl)}`);
+        return;
+      }
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", "inline; filename=resume.pdf");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("X-Frame-Options", "ALLOWALL");
+      response.pipe(res);
+    });
+
+    request.on("error", (err) => {
+      console.error("PDF proxy error:", err);
+      res.status(500).json({ error: "Failed to load PDF" });
+    });
 
   } catch (error) {
     console.error("PDF proxy error:", error);
