@@ -2,19 +2,10 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const pool = require("../config/db");
 
-// Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── POST /api/auth/forgot-password ──
 router.post("/forgot-password", async (req, res) => {
@@ -50,8 +41,8 @@ router.post("/forgot-password", async (req, res) => {
 
     const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
-    await transporter.sendMail({
-      from: `"AI Resume Analyzer" <${process.env.EMAIL_USER}>`,
+    await resend.emails.send({
+      from: "AI Resume Analyzer <onboarding@resend.dev>",
       to: email,
       subject: "Reset Your Password — AI Resume Analyzer",
       html: `
