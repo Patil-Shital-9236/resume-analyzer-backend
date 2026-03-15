@@ -57,18 +57,27 @@ const uploadToCloudinary = (buffer, originalname, fileType) => {
 /* -------------------------
    GET /api/resume/view (PDF Proxy)
 -------------------------- */
+/* -------------------------
+   GET /api/resume/view (PDF Proxy)
+-------------------------- */
 router.get("/view", async (req, res) => {
   try {
     const { url } = req.query;
     if (!url) return res.status(400).json({ error: "URL required" });
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Failed to fetch PDF");
+    const https = require("https");
+    const http = require("http");
+    const client = url.startsWith("https") ? https : http;
 
-    const buffer = await response.arrayBuffer();
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "inline");
-    res.send(Buffer.from(buffer));
+    client.get(url, (response) => {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", "inline");
+      response.pipe(res);
+    }).on("error", (err) => {
+      console.error("PDF proxy error:", err);
+      res.status(500).json({ error: "Failed to load PDF" });
+    });
+
   } catch (error) {
     console.error("PDF proxy error:", error);
     res.status(500).json({ error: "Failed to load PDF" });
