@@ -1,6 +1,9 @@
+
+---
+
 # Resume Analyzer Backend
 
-Backend API for an AI-powered Resume Analyzer that evaluates resumes and provides structured feedback using modern AI models such as OpenAI GPT or Google Gemini.
+Backend API for an AI-powered Resume Analyzer that evaluates resumes and provides structured feedback using modern AI models such as Google Gemini.
 
 Built using **Node.js and Express**, this service accepts resumes, processes them, and returns AI-generated insights including scoring, suggestions, and analysis.
 
@@ -22,14 +25,14 @@ Built using **Node.js and Express**, this service accepts resumes, processes the
 
 # Tech Stack
 
-| Component          | Technology                 |
-| ------------------ | -------------------------- |
-| Runtime            | Node.js                    |
-| Framework          | Express.js                 |
-| AI                 | OpenAI API / Google Gemini |
-| File Upload        | Multer                     |
-| Environment Config | Dotenv                     |
-| Deployment         | Render                     |
+| Component          | Technology        |
+| ------------------ | ----------------- |
+| Runtime            | Node.js           |
+| Framework          | Express.js        |
+| AI                 | Google Gemini API |
+| File Upload        | Multer            |
+| Environment Config | Dotenv            |
+| Deployment         | Render            |
 
 ---
 
@@ -45,7 +48,13 @@ resume-analyzer-backend
 ├── .gitignore
 │
 ├── routes
-│   └── analysis.js
+│   ├── authRoutes.js
+│   ├── forgotPasswordRoutes.js
+│   ├── analysisRoutes.js
+│   ├── jdRoutes.js
+│   ├── resumeRoutes.js
+│   ├── fullAnalysisRoutes.js
+│   └── userRoutes.js
 │
 ├── services
 │   └── aiService.js
@@ -87,10 +96,8 @@ Example configuration:
 PORT=5000
 NODE_ENV=development
 
-AI_MODEL=openai
-
-OPENAI_API_KEY=your_openai_api_key
 GEMINI_API_KEY=your_gemini_api_key
+JWT_SECRET=your_jwt_secret
 
 CORS_ORIGIN=http://localhost:3000
 ```
@@ -120,15 +127,115 @@ http://localhost:5000
 ## Health Check
 
 ```
-GET /api/health
+GET /
+```
+
+Response
+
+```
+AI Resume Analyzer API Running
+```
+
+---
+
+# Authentication APIs
+
+Base Route
+
+```
+/api/auth
+```
+
+---
+
+## Register User
+
+```
+POST /api/auth/register
+```
+
+Request
+
+```json
+{
+  "name": "Shital Patil",
+  "email": "shital@email.com",
+  "password": "123456"
+}
 ```
 
 Response
 
 ```json
 {
-  "status": "ok"
+  "success": true,
+  "message": "User registered successfully"
 }
+```
+
+---
+
+## Login User
+
+```
+POST /api/auth/login
+```
+
+Request
+
+```json
+{
+  "email": "shital@email.com",
+  "password": "123456"
+}
+```
+
+Response
+
+```json
+{
+  "success": true,
+  "token": "jwt_token_here",
+  "user": {
+    "id": "user_id",
+    "name": "Shital Patil",
+    "email": "shital@email.com"
+  }
+}
+```
+
+---
+
+## Forgot Password
+
+```
+POST /api/auth/forgot-password
+```
+
+Request
+
+```json
+{
+  "email": "user@email.com"
+}
+```
+
+Response
+
+```json
+{
+  "message": "Password reset instructions sent"
+}
+```
+
+---
+
+# Resume APIs
+
+Base Route
+
+```
+/api/resume
 ```
 
 ---
@@ -136,14 +243,14 @@ Response
 ## Upload Resume
 
 ```
-POST /api/resume
+POST /api/resume/upload
 ```
 
 Request
 
 ```
 multipart/form-data
-file: resume
+resume: file
 ```
 
 Response
@@ -153,6 +260,16 @@ Response
   "success": true,
   "message": "Resume uploaded successfully"
 }
+```
+
+---
+
+# Resume Analysis APIs
+
+Base Route
+
+```
+/api/analyze
 ```
 
 ---
@@ -183,6 +300,111 @@ Response
 
 ---
 
+# Job Description APIs
+
+Base Route
+
+```
+/api/jd
+```
+
+---
+
+## Analyze Job Description
+
+```
+POST /api/jd/analyze
+```
+
+Request
+
+```json
+{
+  "jobDescription": "Looking for React developer with Node.js experience"
+}
+```
+
+Response
+
+```json
+{
+  "keywords": [
+    "React",
+    "Node.js",
+    "JavaScript"
+  ]
+}
+```
+
+---
+
+# Full Resume Analysis
+
+This endpoint performs a **complete AI analysis of the resume against the job description.**
+
+```
+POST /api/full-analysis
+```
+
+Request
+
+```json
+{
+  "resumeText": "Full resume text",
+  "jobDescription": "job description"
+}
+```
+
+Response
+
+```json
+{
+  "overallScore": 85,
+  "skillsMatch": 80,
+  "missingSkills": ["Docker","AWS"],
+  "suggestions": [
+    "Add measurable achievements",
+    "Improve skills section"
+  ]
+}
+```
+
+---
+
+# User APIs
+
+Base Route
+
+```
+/api/user
+```
+
+---
+
+## Get User Profile
+
+```
+GET /api/user/profile
+```
+
+Headers
+
+```
+Authorization: Bearer TOKEN
+```
+
+Response
+
+```json
+{
+  "id": "user_id",
+  "name": "Shital Patil",
+  "email": "shital@email.com"
+}
+```
+
+---
+
 # Deployment (Render)
 
 ### Create Web Service
@@ -203,9 +425,9 @@ Response
 
 ```
 NODE_ENV=production
-OPENAI_API_KEY=your_key
 GEMINI_API_KEY=your_key
-CORS_ORIGIN=https://your-frontend-domain.com
+JWT_SECRET=your_secret
+CORS_ORIGIN=https://resume-analyzer-frontend-eight-nu.vercel.app
 ```
 
 Deploy and your API will be live.
@@ -218,6 +440,7 @@ Deploy and your API will be live.
 * File upload validation
 * CORS configuration
 * Error handling middleware
+* JWT authentication
 
 ---
 
@@ -238,7 +461,7 @@ npm install
 Verify the key in `.env`:
 
 ```
-OPENAI_API_KEY=your_key
+GEMINI_API_KEY=your_key
 ```
 
 Restart server after updating.
@@ -266,4 +489,18 @@ MIT License
 Shital Patil
 
 GitHub
-https://github.com/Patil-Shital-9236
+[https://github.com/Patil-Shital-9236](https://github.com/Patil-Shital-9236)
+
+---
+
+✅ Now this README:
+
+* matches your **actual backend routes**
+* matches your **Render deployment**
+* works with your **Vercel frontend**
+* follows **industry API documentation format**
+
+---
+
+If you want, I can also show you **one thing that will make this repo look 10× more professional to recruiters**:
+how to add **interactive API docs (Swagger UI)** so people can test your API directly in the browser.
