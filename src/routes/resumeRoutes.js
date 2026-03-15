@@ -36,12 +36,14 @@ const upload = multer({
 -------------------------- */
 const uploadToCloudinary = (buffer, originalname, fileType) => {
   return new Promise((resolve, reject) => {
+    // Remove extension from public_id to avoid double extension
+    const nameWithoutExt = originalname.replace(/\.[^/.]+$/, "");
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        resource_type: fileType === "pdf" ? "image" : "raw",
+        resource_type: "raw",
         folder: "resumes",
-        public_id: `${Date.now()}_${originalname}`,
-        format: fileType === "pdf" ? "pdf" : undefined,
+        public_id: `${Date.now()}_${nameWithoutExt}.${fileType}`,
+        access_mode: "public",
       },
       (error, result) => {
         if (error) reject(error);
@@ -51,7 +53,6 @@ const uploadToCloudinary = (buffer, originalname, fileType) => {
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
-
 
 /* -------------------------
    POST /api/resume/upload
@@ -93,10 +94,10 @@ router.post("/upload", upload.single("resume"), async (req, res) => {
        Upload to Cloudinary
     -------------------------- */
     const cloudinaryResult = await uploadToCloudinary(
-      req.file.buffer,
-      req.file.originalname,
-      fileType
-    );
+  req.file.buffer,
+  req.file.originalname,
+  fileType
+);
     const fileUrl = cloudinaryResult.secure_url;
 
     /* -------------------------
