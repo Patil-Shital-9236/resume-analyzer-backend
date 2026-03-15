@@ -135,6 +135,55 @@ GEMINI_API_KEY=your_gemini_api_key
 JWT_SECRET=your_jwt_secret
 
 CORS_ORIGIN=http://localhost:3000
+
+# =========================================
+# SERVER CONFIG
+# =========================================
+PORT=5000
+
+# =========================================
+# DATABASE
+# =========================================
+DATABASE_URL=postgresql://username:password@localhost:5432/resume_analyzer_db
+
+# =========================================
+# FRONTEND
+# =========================================
+FRONTEND_URL=http://localhost:3000
+
+# =========================================
+# AI APIs
+# =========================================
+GEMINI_API_KEY=your_gemini_api_key_here
+HUGGINGFACE_API_KEY=your_huggingface_api_key_here
+
+# =========================================
+# EMAIL CONFIG (SMTP)
+# =========================================
+EMAIL_USER=your_email@example.com
+EMAIL_APP_PASSWORD=your_email_app_password
+
+# =========================================
+# BREVO EMAIL SERVICE
+# =========================================
+BREVO_API_KEY=your_brevo_api_key
+BREVO_SMTP_USER=your_brevo_smtp_user
+BREVO_SMTP_PASS=your_brevo_smtp_password
+
+# =========================================
+# RESEND EMAIL SERVICE
+# =========================================
+RESEND_API_KEY=your_resend_api_key
+
+# =========================================
+# CLOUDINARY (FILE STORAGE)
+# =========================================
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+
+
 ```
 
 Never commit `.env` to GitHub.
