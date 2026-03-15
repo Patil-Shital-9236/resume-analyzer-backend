@@ -4,6 +4,7 @@ const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
+const fetch = require("node-fetch");
 
 const pool = require("../config/db");
 const extractSkills = require("../services/skillExtractor");
@@ -36,7 +37,6 @@ const upload = multer({
 -------------------------- */
 const uploadToCloudinary = (buffer, originalname, fileType) => {
   return new Promise((resolve, reject) => {
-    // Remove extension from public_id to avoid double extension
     const nameWithoutExt = originalname.replace(/\.[^/.]+$/, "");
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -53,6 +53,27 @@ const uploadToCloudinary = (buffer, originalname, fileType) => {
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
+
+/* -------------------------
+   GET /api/resume/view (PDF Proxy)
+-------------------------- */
+router.get("/view", async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: "URL required" });
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch PDF");
+
+    const buffer = await response.arrayBuffer();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline");
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error("PDF proxy error:", error);
+    res.status(500).json({ error: "Failed to load PDF" });
+  }
+});
 
 /* -------------------------
    POST /api/resume/upload
@@ -94,10 +115,10 @@ router.post("/upload", upload.single("resume"), async (req, res) => {
        Upload to Cloudinary
     -------------------------- */
     const cloudinaryResult = await uploadToCloudinary(
-  req.file.buffer,
-  req.file.originalname,
-  fileType
-);
+      req.file.buffer,
+      req.file.originalname,
+      fileType
+    );
     const fileUrl = cloudinaryResult.secure_url;
 
     /* -------------------------

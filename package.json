@@ -37,7 +37,7 @@
     "mammoth": "^1.11.0",
     "multer": "^2.1.1",
     "multer-storage-cloudinary": "^4.0.0",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^2.7.0",
     "nodemailer": "^8.0.2",
     "openai": "^6.27.0",
     "pdf-parse": "^1.1.4",
