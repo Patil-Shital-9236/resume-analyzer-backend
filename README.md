@@ -36,7 +36,6 @@ Built using **Node.js and Express**, this service accepts resumes, processes the
 
 ---
 
----
 
 # Assumptions Made
 
