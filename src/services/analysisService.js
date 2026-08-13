@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const pool = require("../config/db");
 const calculateMatchScore = require("./matchService");
 
@@ -27,7 +28,7 @@ async function analyzeResume(resumeId, jdId, resumeText) {
     return result.rows[0];
 
   } catch (error) {
-    console.error("Resume analysis failed:", error);
+    logger.error("Resume analysis failed:", error);
     throw error;
   }
 }

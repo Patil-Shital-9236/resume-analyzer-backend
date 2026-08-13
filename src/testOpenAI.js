@@ -1,3 +1,4 @@
+const logger = require('./utils/logger');
 require("dotenv").config();
 const client = require("./utils/openaiClient");
 
@@ -8,10 +9,10 @@ async function testEmbedding() {
       input: "Test resume for AI analyzer"
     });
 
-    console.log("Embedding created!");
-    console.log("Vector length:", response.data[0].embedding.length);
+    logger.info("Embedding created!");
+    logger.info("Vector length:", response.data[0].embedding.length);
   } catch (error) {
-    console.error("OpenAI Error:", error.message);
+    logger.error("OpenAI Error:", error.message);
   }
 }
 

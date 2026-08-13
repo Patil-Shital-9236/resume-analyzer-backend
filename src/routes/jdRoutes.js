@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require("express");
 const pool = require("../config/db");
 const generateEmbedding = require("../services/embeddingService");
@@ -47,7 +48,7 @@ router.post("/", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("JD creation failed:", error);
+    logger.error("JD creation failed:", error);
     res.status(500).json({
       error: "Failed to store job description"
     });

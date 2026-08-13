@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const skillsDB = require("../data/skills");
 
@@ -54,13 +55,13 @@ ${resumeText}
 
     } catch {
 
-      console.warn("Gemini returned invalid JSON");
+      logger.warn("Gemini returned invalid JSON");
 
     }
 
   } catch (error) {
 
-    console.warn("Gemini API failed, using fallback");
+    logger.warn("Gemini API failed, using fallback");
 
   }
 

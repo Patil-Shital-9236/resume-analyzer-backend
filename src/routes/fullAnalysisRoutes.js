@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require("express");
 const multer = require("multer");
 const pdfParse = require("pdf-parse");
@@ -51,10 +52,10 @@ router.post("/", upload.single("resume"), async (req, res) => {
         return res.status(404).json({ error: "Resume not found for this user" });
       }
 
-      resumeText   = existing.rows[0].parsed_content;
+      resumeText   = existing.rows[0].parsed_content || "";
       finalResumeId = existing.rows[0].id;
 
-      console.log("✅ Reusing existing resume id:", finalResumeId);
+      logger.info("✅ Reusing existing resume id:", finalResumeId);
 
     }
 
@@ -97,7 +98,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
       const resumeEmbedding = await generateEmbedding(resumeText.slice(0, MAX_LENGTH));
 
       if (!resumeEmbedding) {
-        console.warn("⚠️ Resume embedding failed, storing NULL");
+        logger.warn("⚠️ Resume embedding failed, storing NULL");
       }
 
       /* ---- Insert New Resume ---- */
@@ -119,7 +120,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
       );
 
       finalResumeId = resumeResult.rows[0].id;
-      console.log("✅ New resume inserted, id:", finalResumeId);
+      logger.info("✅ New resume inserted, id:", finalResumeId);
 
     }
 
@@ -129,7 +130,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
     const jdEmbedding = await generateEmbedding(jdText.slice(0, MAX_LENGTH));
 
     if (!jdEmbedding) {
-      console.warn("⚠️ JD embedding failed, storing NULL");
+      logger.warn("⚠️ JD embedding failed, storing NULL");
     }
 
     /* -------- Run AI Analysis -------- */
@@ -203,7 +204,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
 
   } catch (error) {
 
-    console.error("Analysis failed:", error);
+    logger.error("Analysis failed:", error);
     res.status(500).json({ error: "Analysis failed" });
 
   }

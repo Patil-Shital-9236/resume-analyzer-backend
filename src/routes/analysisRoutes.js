@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require("express");
 const router = express.Router();
 
@@ -23,7 +24,7 @@ router.post("/", async (req, res) => {
 
   } catch (error) {
 
-    console.error("Analysis error:", error);
+    logger.error("Analysis error:", error);
 
     res.status(500).json({
       error: "AI analysis failed"

@@ -1,3 +1,4 @@
+const logger = require('./utils/logger');
 require("dotenv").config();
 const ai = require("./config/gemini");
 
@@ -14,11 +15,11 @@ async function testEmbedding() {
 
     const embedding = response.embeddings[0].values;
 
-    console.log("Embedding size:", embedding.length);
-    console.log("First 10 values:", embedding.slice(0,10));
+    logger.info("Embedding size:", embedding.length);
+    logger.info("First 10 values:", embedding.slice(0,10));
 
   } catch (error) {
-    console.error("Gemini Test Error:", error.message);
+    logger.error("Gemini Test Error:", error.message);
   }
 }
 

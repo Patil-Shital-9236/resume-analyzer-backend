@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const pool = require("../config/db");
 const generateEmbedding = require("./embeddingService");
 const cosineSimilarity = require("../utils/cosineSimilarity");
@@ -29,7 +30,7 @@ async function calculateMatchScore(resumeText, jdId) {
     return matchScore;
 
   } catch (error) {
-    console.error("Match calculation failed:", error);
+    logger.error("Match calculation failed:", error);
     throw error;
   }
 }

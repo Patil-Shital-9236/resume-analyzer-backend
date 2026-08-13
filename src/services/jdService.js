@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 
 const pool = require("../config/db");
 const generateEmbedding = require("./embeddingService");
@@ -24,7 +25,7 @@ async function saveJobDescription(userId, title, company, rawText) {
     return result.rows[0];
 
   } catch (error) {
-    console.error("Error saving job description:", error);
+    logger.error("Error saving job description:", error);
     throw error;
   }
 }

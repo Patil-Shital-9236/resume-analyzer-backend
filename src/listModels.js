@@ -1,3 +1,4 @@
+const logger = require('./utils/logger');
 require("dotenv").config();
 
 const fetch = (...args) =>
@@ -13,18 +14,18 @@ async function listModels() {
     const data = await response.json();
 
     if (!data.models) {
-      console.log("No models returned");
+      logger.info("No models returned");
       return;
     }
 
     data.models.forEach((m) => {
-      console.log(m.name);
+      logger.info(m.name);
       if (m.supportedGenerationMethods)
-        console.log("Methods:", m.supportedGenerationMethods);
-      console.log("------------");
+        logger.info("Methods:", m.supportedGenerationMethods);
+      logger.info("------------");
     });
   } catch (err) {
-    console.error("Error:", err.message);
+    logger.error("Error:", err.message);
   }
 }
 

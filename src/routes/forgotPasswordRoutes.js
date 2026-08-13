@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
@@ -75,14 +76,14 @@ router.post("/forgot-password", async (req, res) => {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error("Brevo API error:", error);
+      logger.error("Brevo API error:", error);
       throw new Error("Email sending failed");
     }
 
     res.json({ message: "If this email exists, a reset link has been sent." });
 
   } catch (err) {
-    console.error("Forgot password error:", err);
+    logger.error("Forgot password error:", err);
     res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
@@ -112,7 +113,7 @@ router.post("/reset-password", async (req, res) => {
     res.json({ message: "Password reset successfully. You can now log in." });
 
   } catch (err) {
-    console.error("Reset password error:", err);
+    logger.error("Reset password error:", err);
     res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });

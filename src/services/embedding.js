@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const axios = require("axios");
 
 async function generateEmbedding(text) {
@@ -29,16 +30,16 @@ async function generateEmbedding(text) {
     const embedding = extractEmbedding(result);
 
     if (!embedding) {
-      console.error("Unexpected embedding shape:", JSON.stringify(result)?.slice(0, 200));
+      logger.error("Unexpected embedding shape:", JSON.stringify(result)?.slice(0, 200));
       return null;
     }
 
-    console.log("✅ Embedding generated, length:", embedding.length);
+    logger.info("✅ Embedding generated, length:", embedding.length);
     return embedding;
 
   } catch (error) {
 
-    console.error("Embedding error:", error.response?.data || error.message);
+    logger.error("Embedding error:", error.response?.data || error.message);
     return null;
 
   }

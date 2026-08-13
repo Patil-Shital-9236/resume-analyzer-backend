@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -49,7 +50,7 @@ ${text}
 
   } catch (error) {
 
-    console.error("Gemini embedding failed:", error.message);
+    logger.error("Gemini embedding failed:", error.message);
 
     /*
     Fallback embedding (simple deterministic vector)
