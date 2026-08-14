@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
 // REGISTER USER
 exports.registerUser = async (req, res) => {
   try {
-    const { email, password, full_name } = req.body;
+    const { email, password, full_name, guestResumeId } = req.body;
 
     // hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -17,6 +17,13 @@ exports.registerUser = async (req, res) => {
        RETURNING id,email,full_name`,
       [email, hashedPassword, full_name]
     );
+
+    const userId = result.rows[0].id;
+
+    if (guestResumeId) {
+      await pool.query(`UPDATE resumes SET user_id = $1 WHERE id = $2 AND user_id IS NULL`, [userId, guestResumeId]);
+      await pool.query(`UPDATE job_descriptions SET user_id = $1 WHERE id IN (SELECT jd_id FROM analysis_reports WHERE resume_id = $2) AND user_id IS NULL`, [userId, guestResumeId]);
+    }
 
     res.json({
       message: "User registered successfully",
@@ -33,7 +40,7 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
 
-    const { email, password } = req.body;
+    const { email, password, guestResumeId } = req.body;
 
     const result = await pool.query(
       "SELECT * FROM users WHERE email=$1",
@@ -53,6 +60,11 @@ exports.loginUser = async (req, res) => {
 
     if (!validPassword) {
       return res.status(401).json({ message: "Invalid password" });
+    }
+
+    if (guestResumeId) {
+      await pool.query(`UPDATE resumes SET user_id = $1 WHERE id = $2 AND user_id IS NULL`, [user.id, guestResumeId]);
+      await pool.query(`UPDATE job_descriptions SET user_id = $1 WHERE id IN (SELECT jd_id FROM analysis_reports WHERE resume_id = $2) AND user_id IS NULL`, [user.id, guestResumeId]);
     }
 
     const token = jwt.sign(

@@ -97,23 +97,26 @@ router.post("/upload", (req, res) => {
         }
 
         let resumeId = null;
-        const userId = req.body.userId;
+        let userId = req.body.userId;
+        if (userId === "null" || userId === "undefined" || !userId) {
+          userId = null;
+        }
 
         if (userId) {
           // Set previous resumes as not latest
           await pool.query(`UPDATE resumes SET is_latest = FALSE WHERE user_id = $1`, [userId]);
+        }
 
-          // Insert new resume
-          const fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-          const dbResult = await pool.query(
-            `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, file_url, is_latest)
-             VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
-            [userId, req.file.originalname, fileType, parsedContent, fileUrl]
-          );
+        // Insert new resume (userId can be null for guests)
+        const fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        const dbResult = await pool.query(
+          `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, file_url, is_latest)
+           VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
+          [userId, req.file.originalname, fileType, parsedContent, fileUrl]
+        );
 
-          if (dbResult.rows.length > 0) {
-            resumeId = dbResult.rows[0].id;
-          }
+        if (dbResult.rows.length > 0) {
+          resumeId = dbResult.rows[0].id;
         }
 
         res.json({

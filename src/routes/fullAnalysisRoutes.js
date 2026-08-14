@@ -24,12 +24,12 @@ router.post("/", upload.single("resume"), async (req, res) => {
 
   try {
 
-    const { userId, jdText, title, company, resumeId } = req.body;
+    let { userId, jdText, title, company, resumeId } = req.body;
 
     /* -------- VALIDATION -------- */
 
-    if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
+    if (userId === "null" || userId === "undefined" || !userId) {
+      userId = null;
     }
 
     if (!jdText) {
@@ -44,7 +44,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
     if (resumeId) {
 
       const existing = await pool.query(
-        `SELECT id, parsed_content FROM resumes WHERE id = $1 AND user_id = $2`,
+        `SELECT id, parsed_content FROM resumes WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)`,
         [resumeId, userId]
       );
 
