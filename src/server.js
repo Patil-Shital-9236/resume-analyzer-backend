@@ -90,7 +90,14 @@ app.use((err, req, res, next) => {
 -------------------------- */
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
-  await initDb();
-  logger.info(`🔥 Server running at http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, async () => {
+    await initDb();
+    logger.info(`🔥 Server running at http://localhost:${PORT}`);
+  });
+} else {
+  // Initialize DB async for serverless
+  initDb().catch(err => logger.error("DB Init Error:", err));
+}
+
+module.exports = app;

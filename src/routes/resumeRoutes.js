@@ -12,27 +12,9 @@ const pool = require("../config/db");
 const router = express.Router();
 
 /* -------------------------
-   ENSURE UPLOAD FOLDER
+   MULTER CONFIG (VERCEL COMPATIBLE)
 -------------------------- */
-const uploadDir = "uploads/";
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-  logger.info("📁 uploads folder created");
-}
-
-/* -------------------------
-   MULTER CONFIG
--------------------------- */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9.]/g, "_");
-    cb(null, Date.now() + "_" + safeName);
-  },
-});
+const storage = multer.memoryStorage();
 
 /* -------------------------
    FILE FILTER (PDF + DOCX ONLY)
@@ -103,7 +85,7 @@ router.post("/upload", (req, res) => {
     (async () => {
       try {
         let parsedContent = "";
-        const fileBuffer = fs.readFileSync(req.file.path);
+        const fileBuffer = req.file.buffer;
         const fileType = req.file.mimetype.includes("pdf") ? "pdf" : "docx";
 
         if (fileType === "pdf") {
@@ -122,7 +104,7 @@ router.post("/upload", (req, res) => {
           await pool.query(`UPDATE resumes SET is_latest = FALSE WHERE user_id = $1`, [userId]);
 
           // Insert new resume
-          const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+          const fileUrl = 'memory-only';
           const dbResult = await pool.query(
             `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, s3_key, is_latest)
              VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
@@ -139,8 +121,8 @@ router.post("/upload", (req, res) => {
           message: "✅ File uploaded successfully",
           resumeId,
           file: {
-            name: req.file.filename,
-            path: req.file.path,
+            name: req.file.originalname,
+            path: "memory",
             type: req.file.mimetype,
             size: req.file.size,
           },
