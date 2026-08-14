@@ -1,6 +1,7 @@
 const logger = require('../utils/logger');
 const { Pool } = require("pg");
-const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
+const uuidv4 = crypto.randomUUID;
 
 // Real Postgres Pool
 const realPool = new Pool(

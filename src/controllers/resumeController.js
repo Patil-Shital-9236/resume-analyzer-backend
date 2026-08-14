@@ -2,7 +2,8 @@ const logger = require('../utils/logger');
 const fs = require("fs");
 const pdfParse = require("pdf-parse");
 const pool = require("../config/db");
-const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
+const uuidv4 = crypto.randomUUID;
 
 const generateEmbedding = require("../services/embeddingService");
 const cosineSimilarity = require("../utils/cosineSimilarity");

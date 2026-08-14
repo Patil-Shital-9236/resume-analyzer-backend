@@ -1,5 +1,7 @@
 require("dotenv").config();
-require("./tracing");
+if (process.env.NODE_ENV !== 'production') {
+  require("./tracing");
+}
 
 const express = require("express");
 const cors = require("cors");
