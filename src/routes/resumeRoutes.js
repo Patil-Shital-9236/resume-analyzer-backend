@@ -107,9 +107,8 @@ router.post("/upload", (req, res) => {
           await pool.query(`UPDATE resumes SET is_latest = FALSE WHERE user_id = $1`, [userId]);
         }
 
-        // We disable base64 storage to make uploads instant.
-        // We use a small placeholder string to prevent "NOT NULL" DB errors
-        const fileUrl = "disabled_for_speed";
+        // We use a processing placeholder for now so the upload is instant.
+        const fileUrl = "processing";
         
         const dbResult = await pool.query(
           `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, file_url, is_latest)
@@ -133,11 +132,34 @@ router.post("/upload", (req, res) => {
           },
         });
 
+        // -------------------------
+        // BACKGROUND SAVE
+        // -------------------------
+        // The DB insert for a massive 5MB base64 string can take several seconds over a remote network.
+        // We do it asynchronously *after* sending the response so the user isn't blocked.
+        if (resumeId) {
+          setImmediate(async () => {
+            try {
+              const base64Str = fileBuffer.toString("base64");
+              const finalUrl = `data:${req.file.mimetype};base64,${base64Str}`;
+              await pool.query(
+                `UPDATE resumes SET file_url = $1 WHERE id = $2`,
+                [finalUrl, resumeId]
+              );
+              logger.info(`✅ Background save complete for resume ${resumeId}`);
+            } catch (err) {
+              logger.error("❌ Background save failed:", err);
+            }
+          });
+        }
+
       } catch (dbErr) {
         logger.error("❌ DB insert error during resume upload:", dbErr);
-        res.status(500).json({
-          error: "Failed to process resume file"
-        });
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: "Failed to process resume file"
+          });
+        }
       }
     })();
 
