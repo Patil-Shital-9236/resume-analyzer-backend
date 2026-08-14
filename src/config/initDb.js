@@ -6,7 +6,6 @@ const initDb = async () => {
     logger.info("🔄 Initializing database tables...");
 
     await pool.query(`
-      CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
       CREATE TABLE IF NOT EXISTS users (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

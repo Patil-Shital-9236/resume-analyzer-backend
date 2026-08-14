@@ -68,6 +68,15 @@ app.get("/", (req, res) => {
   res.send("🚀 AI Resume Analyzer API Running (LOCAL)");
 });
 
+app.get("/api/setup-db", async (req, res) => {
+  try {
+    await initDb();
+    res.json({ message: "Database tables created successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* -------------------------
    404 Handler (VERY IMPORTANT)
 -------------------------- */
