@@ -107,9 +107,9 @@ router.post("/upload", (req, res) => {
           await pool.query(`UPDATE resumes SET is_latest = FALSE WHERE user_id = $1`, [userId]);
         }
 
-        // Insert new resume (userId can be null for guests)
         // We disable base64 storage to make uploads instant.
-        const fileUrl = null;
+        // We use a small placeholder string to prevent "NOT NULL" DB errors
+        const fileUrl = "disabled_for_speed";
         
         const dbResult = await pool.query(
           `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, file_url, is_latest)
