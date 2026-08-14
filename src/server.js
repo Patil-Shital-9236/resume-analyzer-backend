@@ -22,7 +22,9 @@ const app = express();
    Middlewares (LOCAL)
 -------------------------- */
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: function (origin, callback) {
+    callback(null, true); // Allow all origins for now
+  },
   credentials: true
 }));
 
