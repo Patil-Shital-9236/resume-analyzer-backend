@@ -21,21 +21,7 @@ const realPool = new Pool(
       }
 );
 
-let isPgConnected = false;
-
-// Test initial Postgres connection asynchronously
-(async () => {
-  try {
-    const client = await realPool.connect();
-    client.release();
-    isPgConnected = true;
-    logger.info("✅ Connected to PostgreSQL Database.");
-  } catch (err) {
-    isPgConnected = false;
-    logger.warn("⚠️ PostgreSQL connection failed (" + err.message + "). Using In-Memory Database Fallback.");
-  }
-})();
-
+// Connection test block removed to avoid Vercel race conditions.
 // In-Memory Storage Tables
 const memoryDb = {
   users: [],
@@ -274,19 +260,20 @@ const executeInMemoryQuery = (text, params = []) => {
 // Unified Pool Object
 const pool = {
   query: async (text, params) => {
-    if (isPgConnected) {
+    if (process.env.DATABASE_URL) {
       try {
         return await realPool.query(text, params);
       } catch (err) {
-        logger.warn("⚠️ Postgres query error, falling back to in-memory mode:", err.message);
-        isPgConnected = false;
-        return executeInMemoryQuery(text, params);
+        logger.warn("⚠️ Postgres query error:", err.message);
+        // If they provided a DB URL, we should throw the error so they see if their DB is down or tables missing.
+        // Falling back to memory silently causes data loss!
+        throw err; 
       }
     }
     return executeInMemoryQuery(text, params);
   },
   connect: async () => {
-    if (isPgConnected) return realPool.connect();
+    if (process.env.DATABASE_URL) return realPool.connect();
     return {
       query: async (text, params) => executeInMemoryQuery(text, params),
       release: () => {}
