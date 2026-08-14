@@ -21,6 +21,7 @@ const initDb = async () => {
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         file_name VARCHAR(255) NOT NULL,
         s3_key VARCHAR(255) DEFAULT 'local-storage',
+        file_url TEXT,
         file_type VARCHAR(50),
         parsed_content TEXT,
         structured_data JSONB DEFAULT '{}'::jsonb,
@@ -61,6 +62,8 @@ const initDb = async () => {
         used BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      ALTER TABLE resumes ADD COLUMN IF NOT EXISTS file_url TEXT;
     `);
 
     logger.info("✅ Database tables initialized successfully.");

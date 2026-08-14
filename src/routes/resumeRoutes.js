@@ -106,7 +106,7 @@ router.post("/upload", (req, res) => {
           // Insert new resume
           const fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
           const dbResult = await pool.query(
-            `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, s3_key, is_latest)
+            `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, file_url, is_latest)
              VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
             [userId, req.file.originalname, fileType, parsedContent, fileUrl]
           );
