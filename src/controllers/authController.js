@@ -20,7 +20,7 @@ exports.registerUser = async (req, res) => {
 
     const userId = result.rows[0].id;
 
-    if (guestResumeId) {
+    if (guestResumeId && guestResumeId !== "null" && guestResumeId !== "undefined") {
       await pool.query(`UPDATE resumes SET user_id = $1 WHERE id = $2 AND user_id IS NULL`, [userId, guestResumeId]);
       await pool.query(`UPDATE job_descriptions SET user_id = $1 WHERE id IN (SELECT jd_id FROM analysis_reports WHERE resume_id = $2) AND user_id IS NULL`, [userId, guestResumeId]);
     }
@@ -62,7 +62,7 @@ exports.loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    if (guestResumeId) {
+    if (guestResumeId && guestResumeId !== "null" && guestResumeId !== "undefined") {
       await pool.query(`UPDATE resumes SET user_id = $1 WHERE id = $2 AND user_id IS NULL`, [user.id, guestResumeId]);
       await pool.query(`UPDATE job_descriptions SET user_id = $1 WHERE id IN (SELECT jd_id FROM analysis_reports WHERE resume_id = $2) AND user_id IS NULL`, [user.id, guestResumeId]);
     }
