@@ -136,7 +136,7 @@ const executeInMemoryQuery = (text, params = []) => {
       structured_data: params[5] || "{}",
       embedding: params[6] || null,
       is_latest: true,
-      file_url: params[4] && params[4].startsWith("http") ? params[4] : null,
+      file_url: params[4] && (params[4].startsWith("http") || params[4].startsWith("data:")) ? params[4] : null,
       created_at: new Date()
     };
     memoryDb.resumes.push(newResume);
