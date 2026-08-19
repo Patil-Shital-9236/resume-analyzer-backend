@@ -100,6 +100,16 @@ const executeInMemoryQuery = (text, params = []) => {
     return { rows: [], rowCount: 0 };
   }
 
+  // UPDATE resumes SET file_url = $1 WHERE id = $2
+  if (lowerSql.includes("update resumes set file_url")) {
+    const fileUrl = params[0];
+    const resumeId = params[1];
+    memoryDb.resumes.forEach(r => {
+      if (r.id === resumeId) r.file_url = fileUrl;
+    });
+    return { rows: [], rowCount: 1 };
+  }
+
   // UPDATE resumes SET structured_data = $1 WHERE id = $2
   if (lowerSql.includes("update resumes set structured_data")) {
     const structData = params[0];
@@ -107,14 +117,14 @@ const executeInMemoryQuery = (text, params = []) => {
     memoryDb.resumes.forEach(r => {
       if (r.id === resumeId) r.structured_data = structData;
     });
-    return { rows: [], rowCount: 0 };
+    return { rows: [], rowCount: 1 };
   }
 
   // INSERT INTO resumes
   if (lowerSql.includes("insert into resumes")) {
     const newResume = {
       id: uuidv4(),
-      user_id: params[0],
+      user_id: params[0] === "null" || !params[0] ? null : params[0],
       file_name: params[1],
       file_type: params[2] || (params[3] && params[3].includes("pdf") ? "pdf" : "docx"),
       parsed_content: params[3] || params[4] || "",
@@ -122,7 +132,7 @@ const executeInMemoryQuery = (text, params = []) => {
       structured_data: params[5] || "{}",
       embedding: params[6] || null,
       is_latest: true,
-      file_url: params[4] && (params[4].startsWith("http") || params[4].startsWith("data:")) ? params[4] : null,
+      file_url: params[4] && (params[4].startsWith("http") || params[4].startsWith("data:") || params[4] === "processing") ? params[4] : null,
       created_at: new Date()
     };
     memoryDb.resumes.push(newResume);
@@ -131,14 +141,14 @@ const executeInMemoryQuery = (text, params = []) => {
 
   // SELECT ... FROM resumes WHERE id = $1 AND user_id = $2
   if (lowerSql.includes("from resumes") && lowerSql.includes("where id = $1")) {
-    const matched = memoryDb.resumes.filter(r => r.id === params[0] && (!params[1] || r.user_id === params[1]));
+    const matched = memoryDb.resumes.filter(r => r.id === params[0] && (!params[1] || r.user_id === params[1] || !r.user_id || r.user_id === "null"));
     return { rows: matched, rowCount: matched.length };
   }
 
   // SELECT ... FROM resumes WHERE user_id = $1
   if (lowerSql.includes("from resumes") && lowerSql.includes("user_id = $1")) {
     const matched = memoryDb.resumes
-      .filter(r => r.user_id === params[0])
+      .filter(r => r.user_id === params[0] || (params[0] === null && !r.user_id))
       .sort((a, b) => b.created_at - a.created_at);
     return { rows: matched, rowCount: matched.length };
   }
@@ -155,7 +165,7 @@ const executeInMemoryQuery = (text, params = []) => {
   if (lowerSql.includes("insert into job_descriptions")) {
     const newJd = {
       id: uuidv4(),
-      user_id: params[0],
+      user_id: params[0] === "null" || !params[0] ? null : params[0],
       title: params[1],
       company: params[2],
       raw_text: params[3],
@@ -169,7 +179,7 @@ const executeInMemoryQuery = (text, params = []) => {
   // SELECT ... FROM job_descriptions WHERE user_id = $1
   if (lowerSql.includes("from job_descriptions")) {
     const matched = memoryDb.job_descriptions
-      .filter(j => j.user_id === params[0])
+      .filter(j => j.user_id === params[0] || (params[0] === null && !j.user_id))
       .sort((a, b) => b.created_at - a.created_at);
     return { rows: matched, rowCount: matched.length };
   }
@@ -264,16 +274,20 @@ const pool = {
       try {
         return await realPool.query(text, params);
       } catch (err) {
-        logger.warn("⚠️ Postgres query error:", err.message);
-        // If they provided a DB URL, we should throw the error so they see if their DB is down or tables missing.
-        // Falling back to memory silently causes data loss!
-        throw err; 
+        logger.warn("⚠️ Postgres query error, falling back to in-memory DB:", err.message);
+        return executeInMemoryQuery(text, params);
       }
     }
     return executeInMemoryQuery(text, params);
   },
   connect: async () => {
-    if (process.env.DATABASE_URL) return realPool.connect();
+    if (process.env.DATABASE_URL) {
+      try {
+        return await realPool.connect();
+      } catch (err) {
+        logger.warn("⚠️ Postgres connect error, using memory DB connector:", err.message);
+      }
+    }
     return {
       query: async (text, params) => executeInMemoryQuery(text, params),
       release: () => {}

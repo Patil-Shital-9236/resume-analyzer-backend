@@ -157,7 +157,7 @@ router.post("/upload", (req, res) => {
         logger.error("❌ DB insert error during resume upload:", dbErr);
         if (!res.headersSent) {
           res.status(500).json({
-            error: "Failed to process resume file"
+            error: "Failed to process resume file: " + (dbErr.message || "Unknown error")
           });
         }
       }
