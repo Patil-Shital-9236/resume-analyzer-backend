@@ -89,11 +89,21 @@ router.post("/upload", (req, res) => {
         const fileType = req.file.mimetype.includes("pdf") ? "pdf" : "docx";
 
         if (fileType === "pdf") {
-          const pdfData = await pdfParse(fileBuffer);
-          parsedContent = pdfData.text;
+          try {
+            const pdfData = await pdfParse(fileBuffer);
+            parsedContent = pdfData.text;
+          } catch (pdfErr) {
+            logger.warn("⚠️ pdfParse failed, using buffer string fallback:", pdfErr.message);
+            parsedContent = fileBuffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ");
+          }
         } else if (fileType === "docx") {
-          const docxData = await mammoth.extractRawText({ buffer: fileBuffer });
-          parsedContent = docxData.value;
+          try {
+            const docxData = await mammoth.extractRawText({ buffer: fileBuffer });
+            parsedContent = docxData.value;
+          } catch (docxErr) {
+            logger.warn("⚠️ docx parsing failed, using buffer string fallback:", docxErr.message);
+            parsedContent = fileBuffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ");
+          }
         }
 
         let resumeId = null;
