@@ -103,13 +103,13 @@ app.use((err, req, res, next) => {
 -------------------------- */
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'production') {
+if (!process.env.VERCEL) {
   app.listen(PORT, async () => {
-    await initDb();
-    logger.info(`🔥 Server running at http://localhost:${PORT}`);
+    await initDb().catch(err => logger.error("DB Init Error:", err));
+    logger.info(`🔥 Server running on port ${PORT}`);
   });
 } else {
-  // Initialize DB async for serverless
+  // Initialize DB async for Vercel serverless
   initDb().catch(err => logger.error("DB Init Error:", err));
 }
 
