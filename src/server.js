@@ -68,6 +68,10 @@ app.get("/", (req, res) => {
   res.send("🚀 AI Resume Analyzer API Running (LOCAL)");
 });
 
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 app.get("/api/setup-db", async (req, res) => {
   try {
     await initDb();

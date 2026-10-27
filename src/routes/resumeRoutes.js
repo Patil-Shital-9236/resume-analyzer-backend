@@ -93,17 +93,32 @@ router.post("/upload", upload.single("resume"), async (req, res) => {
       }
     }
 
-    const base64Str = fileBuffer.toString("base64");
-    const fileUrl = `data:${req.file.mimetype};base64,${base64Str}`;
-
+    // Insert resume immediately without sending megabytes of base64 over the database connection
     const dbResult = await pool.query(
       `INSERT INTO resumes (user_id, file_name, file_type, parsed_content, file_url, is_latest)
-       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
-      [userId, req.file.originalname, fileType, parsedContent, fileUrl]
+       VALUES ($1, $2, $3, $4, 'processing', TRUE) RETURNING id`,
+      [userId, req.file.originalname, fileType, parsedContent]
     );
 
     if (dbResult.rows && dbResult.rows.length > 0) {
       resumeId = dbResult.rows[0].id;
+    }
+
+    // Save base64 preview asynchronously so the upload response returns instantly to the user
+    if (resumeId) {
+      setImmediate(async () => {
+        try {
+          const base64Str = fileBuffer.toString("base64");
+          const fileUrl = `data:${req.file.mimetype};base64,${base64Str}`;
+          await pool.query(
+            `UPDATE resumes SET file_url = $1 WHERE id = $2`,
+            [fileUrl, resumeId]
+          );
+          logger.info(`✅ Resume preview cached in background for id: ${resumeId}`);
+        } catch (bgErr) {
+          logger.warn("⚠️ Background fileUrl update warning:", bgErr.message);
+        }
+      });
     }
 
     return res.json({
